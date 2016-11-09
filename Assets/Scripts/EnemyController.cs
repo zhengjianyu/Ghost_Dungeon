@@ -3,13 +3,13 @@ using System.Collections;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-public class EnemyController : MonoBehaviour {
+public class EnemyController : ObjectController {
     public AudioClip attack;
     public AudioClip hit;
     public AudioClip die;
 
-    public float movement_animation_interval = 1f;
-    public float attack_animation_interval = 1f;
+    public int exp;
+
     public int AutoAttackType = 0; //0 for melee, 1 for range
     public string Name;
     public int lvl;
@@ -50,21 +50,17 @@ public class EnemyController : MonoBehaviour {
     [HideInInspector]
     public float CurrMPH;
 
-    Rigidbody2D rb;
+    private IndicationController IC;
+
     private Animator Anim;
-
-    [HideInInspector]
-    public bool Attacking = false;
-
-    [HideInInspector]
-    public bool Alive = true;
 
     AIController AI;
 
-    void Awake() {
+    protected override void Awake() {
+        base.Awake();
         AI = GetComponent<AIController>();
-        rb = transform.parent.GetComponent<Rigidbody2D>();
-        Anim = this.GetComponent<Animator>();
+        Anim = GetComponent<Animator>();
+        IC = transform.Find("Indication Board").GetComponent<IndicationController>();
     }
     // Use this for initialization
     void Start () {
@@ -85,6 +81,7 @@ public class EnemyController : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+        ControlUpdate();
         AnimUpdate();
     }
 
@@ -92,10 +89,26 @@ public class EnemyController : MonoBehaviour {
         MoveUpdate();
     }
 
+    void MoveUpdate() {
+        if (MoveVector != Vector2.zero)
+            //rb.MovePosition(rb.position + AI.MoveVector * (CurrMoveSpd/100) * Time.deltaTime);
+            rb.AddForce(MoveVector * (CurrMoveSpd / 100) * rb.drag);
+    }
+
+    void ControlUpdate() {
+        if (Stunned)
+            return;
+        if (AI) {
+            AttackVector = AI.AttackVector;
+            MoveVector = AI.MoveVector;
+            Direction = AI.Direction;
+        }
+    }
+
     //----------public
 
     //Combat
-    public DMG AutoAttackDamageDeal(float TargetDefense) {
+    override public DMG AutoAttackDamageDeal(float TargetDefense) {
         DMG dmg = new DMG();
         if (Random.value < (CurrCritChance / 100)) {
             dmg.Damage += CurrAD * (CurrCritDmgBounus / 100);
@@ -122,8 +135,7 @@ public class EnemyController : MonoBehaviour {
             CurrMana = MaxMana;
     }
 
-    public void DeductHealth(DMG dmg,AudioClip crit_hit) {
-        IndicationController IC = transform.Find("Indication Board").GetComponent<IndicationController>();
+    override public void DeductHealth(DMG dmg,AudioClip crit_sfx = null) {
         if (CurrHealth - dmg.Damage <= 0) {
             CurrHealth -= dmg.Damage;
             IC.UpdateHealthBar();
@@ -135,7 +147,8 @@ public class EnemyController : MonoBehaviour {
             Animator Anim = GetComponent<Animator>();
             Anim.SetFloat("PhysicsSpeedFactor", GetPhysicsSpeedFactor());
             Anim.Play("crit");
-            AudioSource.PlayClipAtPoint(crit_hit, transform.position, GameManager.SFX_Volume);
+            if(crit_sfx!=null)
+                AudioSource.PlayClipAtPoint(crit_sfx, transform.position, GameManager.SFX_Volume);
         } else {
             AudioSource.PlayClipAtPoint(hit, transform.position, GameManager.SFX_Volume);
         }
@@ -144,6 +157,9 @@ public class EnemyController : MonoBehaviour {
         IC.PopUpDmg(dmg);
     }
 
+    public override void DeductMana(float ManaCost) {
+        CurrMana -= ManaCost;
+    }
 
     //Animation
     public float GetMovementAnimSpeed() {
@@ -172,25 +188,20 @@ public class EnemyController : MonoBehaviour {
         }
     }
 
-    void MoveUpdate() {
-        if (AI.MoveVector != Vector2.zero)
-            rb.MovePosition(rb.position + AI.MoveVector * (CurrMoveSpd/100) * Time.deltaTime);
-    }
-
     void AnimUpdate() {
         if (Attacking) {
             Anim.speed = GetAttackAnimSpeed();
         } else {
             Anim.speed = GetMovementAnimSpeed();
         }
-        if (AI.AttackVector != Vector2.zero) {
+        if (AttackVector != Vector2.zero) {
             Anim.SetBool("IsAttacking", true);
-            Anim.SetInteger("Direction", AI.Direction);
+            Anim.SetInteger("Direction", Direction);
             Anim.SetBool("IsMoving", false);
         }
-        else if (AI.MoveVector != Vector2.zero && AI.AttackVector == Vector2.zero) {
+        else if (MoveVector != Vector2.zero && AttackVector == Vector2.zero) {
             Anim.SetBool("IsMoving", true);
-            Anim.SetInteger("Direction", AI.Direction);
+            Anim.SetInteger("Direction", Direction);
             Anim.SetBool("IsAttacking", false);
         }
         else {
@@ -199,8 +210,16 @@ public class EnemyController : MonoBehaviour {
         }
     }   
 
+    void SpawnEXP() {
+        PlayerController MPC = GameObject.Find("MainPlayer/PlayerController").GetComponent<PlayerController>();
+        if(MPC.Alive)
+            MPC.AddEXP(exp);        
+    }
+
     void DieUpdate() {
         if (CurrHealth <= 0) {//Insert dead animation here
+            Alive = false;
+            SpawnEXP();
             GetComponent<DropList>().SpawnLoots();
             Destroy(transform.parent.gameObject);
         }

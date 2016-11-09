@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public class CharacterSheetController : MonoBehaviour
 {
@@ -85,31 +86,33 @@ public class CharacterSheetController : MonoBehaviour
 
     void UpdateCharacterSheetUI()
 	{
+        transform.Find("StatsPanel/Stats").GetComponent<Text>().text = "Lvl "+PC.PlayerData.lvl + " : "+PC.PlayerData.exp + "/" + PC.GetNextLvlExp();//Just for now
+
 		//Stats update
-		HealthValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrHealth.ToString();
-		ResourceValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrMana.ToString();
-		ADValue.GetComponent<UnityEngine.UI.Text> ().text = 			PC.CurrAD.ToString();
-		MDValue.GetComponent<UnityEngine.UI.Text> ().text = 			PC.CurrMD.ToString ();
-		AttckSpdValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrAttSpd.ToString();
-		MoveSpdValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrMoveSpd.ToString();
-		DefenseValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrDefense.ToString();
-		CritChanceValue.GetComponent<UnityEngine.UI.Text> ().text =		PC.CurrCritChance.ToString();
-		CritBonusValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrCritDmgBounus.ToString();
-		LifePerHitValue.GetComponent<UnityEngine.UI.Text> ().text = 	PC.CurrLPH.ToString();
-		ResourcePerHitValue.GetComponent<UnityEngine.UI.Text> ().text = PC.CurrMPH.ToString();
+		HealthValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrHealth.ToString("F0");
+        ResourceValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrMana.ToString("F0");
+        ADValue.GetComponent<UnityEngine.UI.Text> ().text = 			PC.CurrAD.ToString("F0");
+        MDValue.GetComponent<UnityEngine.UI.Text> ().text = 			PC.CurrMD.ToString("F0");
+        AttckSpdValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrAttSpd.ToString("F0");
+        MoveSpdValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrMoveSpd.ToString("F0");
+        DefenseValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrDefense.ToString("F0");
+        CritChanceValue.GetComponent<UnityEngine.UI.Text> ().text =		PC.CurrCritChance.ToString("F0");
+        CritBonusValue.GetComponent<UnityEngine.UI.Text> ().text = 		PC.CurrCritDmgBounus.ToString("F0");
+        LifePerHitValue.GetComponent<UnityEngine.UI.Text> ().text = 	PC.CurrLPH.ToString("F0");
+        ResourcePerHitValue.GetComponent<UnityEngine.UI.Text> ().text = PC.CurrMPH.ToString("F0");
 
-		//Gear Update
-
-
-
-		//Invetory Update
+        //Gear Update
 
 
 
-		//Talents Update
+        //Invetory Update
+
+
+
+        //Talents Update
 
 
 
 
-	}
+    }
 }

@@ -17,8 +17,8 @@ public class SaveLoadManager : MonoBehaviour {
     }
 
     public void SaveCurrentPlayerInfo() {
-        PlayerController Player = FindObjectOfType<PlayerController>();
-        DataManager.SaveCharacter(Player.PlayerData);
+        PlayerController PC = GameObject.Find("MainPlayer/PlayerController").GetComponent<PlayerController>();
+        DataManager.SaveCharacter(PC.PlayerData);
         DataManager.Save();
     }
 

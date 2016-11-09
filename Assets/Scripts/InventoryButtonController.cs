@@ -8,7 +8,6 @@ public class InventoryButtonController : MonoBehaviour {
     private int Slot = -999;
 
     GameObject ES;
-    GameObject EquippedSlotButtons;
 
     Text StatsText;
     public GameObject Stats;
@@ -19,7 +18,6 @@ public class InventoryButtonController : MonoBehaviour {
         Slot = int.Parse(gameObject.name);
         PC = GameObject.Find("MainPlayer/PlayerController").transform.GetComponent<PlayerController>();
         ES = GameObject.Find("EventSystem");
-        EquippedSlotButtons = GameObject.Find("MainPlayer/PlayerUI/CharacterSheet/EquippedSlotButtons").gameObject;
         Stats = Instantiate(Stats,transform) as GameObject;
         Stats.transform.localPosition = new Vector3(0, 0, 0);
         Stats.transform.localScale = new Vector3(1.2f, 1.2f,0);
@@ -61,6 +59,8 @@ public class InventoryButtonController : MonoBehaviour {
         } else {
             E = PC.GetInventoryItem(Slot);
             if (E != null) {
+                if (EquipmentIcon != null)
+                    DestroyObject(EquipmentIcon);
                 EquipmentIcon = EquipmentController.ObtainInventoryIcon(E,transform);
             } else {
                 DestroyObject(EquipmentIcon);

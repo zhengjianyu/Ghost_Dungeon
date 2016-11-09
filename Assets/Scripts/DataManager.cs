@@ -6,26 +6,36 @@ using System;
 using System.Collections.Generic;
 
 
-public static class DataManager{
+public static class DataManager {
     static private string FilePath = "Save/username_save.txt";
     static private string DataSeperator = ",";
     static private string SlotSeperator = "------SlotSeperator------";
     static private string CategorySeperator = "---CategorySeperator---";
+    //static private string SkillPathSeperator = "-ActiveSkillSep-";
     static private string EquipmentSeperator = "-EquipSeperator-";
+
     static private int NumOfSlot = 6;
     static private CharacterDataStruct[] CharacterData = new CharacterDataStruct[NumOfSlot];
 
+    static private int InventoryCapacity = 40;
+
+    static private int SkillTreeSize = 18;
+
+    static private int ActiveSkillSlots = 4;
+
     public static void Save() {
-        StreamWriter SaveStream = new StreamWriter(FilePath);
+        StreamWriter SS = new StreamWriter(FilePath);
         for (int i = 0; i < NumOfSlot; i++) {
-            WriteCharacter(SaveStream, i);
-            WriteEquipments(SaveStream, i);
-            WriteInventory(SaveStream, i);
+            WriteCharacter(SS, i);
+            WriteSkillTreelvls(SS, i);
+            WriteActiveSkills(SS, i);
+            WriteEquipments(SS, i);
+            WriteInventory(SS, i);
             if (i != NumOfSlot - 1)
-                SaveStream.Write(Environment.NewLine + SlotSeperator + Environment.NewLine);
+                SS.Write(Environment.NewLine + SlotSeperator + Environment.NewLine);
         }
 
-        SaveStream.Close();
+        SS.Close();
     }
 
     public static void Load() {
@@ -42,10 +52,15 @@ public static class DataManager{
         string[] CharactersData = Regex.Split(SlotData, SlotSeperator);
         for (int i = 0; i < NumOfSlot; i++) {
             string[] ThisCharacterData = Regex.Split(CharactersData[i], CategorySeperator);
-            string BaseData = ThisCharacterData[0];
-            string EquipData = ThisCharacterData[1];
-            string InventoryData = ThisCharacterData[2];
+            int n = 0;
+            string BaseData = ThisCharacterData[n++];
+            string SkillTreelvlsData = ThisCharacterData[n++];
+            string ActiveSkillsData = ThisCharacterData[n++];
+            string EquipData = ThisCharacterData[n++];
+            string InventoryData = ThisCharacterData[n++];
             ReadCharacter(i, BaseData);
+            ReadSkillTreelvls(i, SkillTreelvlsData);
+            ReadActiveSkills(i, ActiveSkillsData);
             ReadEquipments(i, EquipData);
             ReadInventory(i, InventoryData);
         }
@@ -71,6 +86,12 @@ public static class DataManager{
             CharacterData[SlotIndex].Class + DataSeperator +
             CharacterData[SlotIndex].lvl + DataSeperator +
             CharacterData[SlotIndex].paragon_lvl + DataSeperator +
+            CharacterData[SlotIndex].exp + DataSeperator +
+
+            CharacterData[SlotIndex].souls + DataSeperator +
+
+            CharacterData[SlotIndex].StatPoints + DataSeperator +
+            CharacterData[SlotIndex].SkillPoints + DataSeperator +
 
             CharacterData[SlotIndex].BaseHealth + DataSeperator +
             CharacterData[SlotIndex].BaseMana + DataSeperator +
@@ -85,7 +106,34 @@ public static class DataManager{
             CharacterData[SlotIndex].BaseMPH +
             Environment.NewLine + CategorySeperator + Environment.NewLine);
     }
-   
+
+    private static void WriteSkillTreelvls(StreamWriter SW, int SlotIndex) {
+        for(int s = 0; s < SkillTreeSize; s++) {
+            if (s == SkillTreeSize - 1)
+                SW.Write(CharacterData[SlotIndex].SkillTreelvls[s]);
+            else
+                SW.Write(CharacterData[SlotIndex].SkillTreelvls[s] + DataSeperator);
+        }
+        SW.Write(Environment.NewLine + CategorySeperator + Environment.NewLine);
+    }
+
+    private static void WriteActiveSkills(StreamWriter SW, int SlotIndex) {
+        for(int s = 0; s < ActiveSkillSlots; s++) {
+            if (CharacterData[SlotIndex].ActiveSlotData[s]){
+                if (s == ActiveSkillSlots - 1)
+                    SW.Write(CharacterData[SlotIndex].ActiveSlotData[s].Name);
+                else
+                    SW.Write(CharacterData[SlotIndex].ActiveSlotData[s].Name + DataSeperator);
+            } else {
+                if (s == ActiveSkillSlots - 1)
+                    SW.Write("null");
+                else
+                    SW.Write("null" + DataSeperator);
+            }
+        }
+        SW.Write(Environment.NewLine + CategorySeperator + Environment.NewLine);
+    }
+
     private static void WriteEquipments(StreamWriter SW, int SlotIndex) {
         foreach (var e in CharacterData[SlotIndex].Equipments) {
             if (e.Value!=null) {
@@ -162,23 +210,52 @@ public static class DataManager{
     //------------------Reading
     private static void ReadCharacter(int slotIndex, string BaseData) {
         string[] S_BaseData = Regex.Split(BaseData, DataSeperator);
-        CharacterData[slotIndex].SlotIndex = int.Parse(S_BaseData[0]);
-        CharacterData[slotIndex].Name = S_BaseData[1];
-        CharacterData[slotIndex].Class = S_BaseData[2];
-        CharacterData[slotIndex].lvl = int.Parse(S_BaseData[3]);
-        CharacterData[slotIndex].paragon_lvl = int.Parse(S_BaseData[4]);
+        int i = 0;
+        CharacterData[slotIndex].SlotIndex = int.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].Name = S_BaseData[i++];
+        CharacterData[slotIndex].Class = S_BaseData[i++];
+        CharacterData[slotIndex].lvl = int.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].paragon_lvl = int.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].exp = int.Parse(S_BaseData[i++]);
 
-        CharacterData[slotIndex].BaseHealth = float.Parse(S_BaseData[5]);
-        CharacterData[slotIndex].BaseMana = float.Parse(S_BaseData[6]);
-        CharacterData[slotIndex].BaseAD = float.Parse(S_BaseData[7]);
-        CharacterData[slotIndex].BaseMD = float.Parse(S_BaseData[8]);
-        CharacterData[slotIndex].BaseAttkSpd = float.Parse(S_BaseData[9]);
-        CharacterData[slotIndex].BaseMoveSpd = float.Parse(S_BaseData[10]);
-        CharacterData[slotIndex].BaseDefense = float.Parse(S_BaseData[11]);
-        CharacterData[slotIndex].BaseCritChance = float.Parse(S_BaseData[12]);
-        CharacterData[slotIndex].BaseCritDmgBounus = float.Parse(S_BaseData[13]);
-        CharacterData[slotIndex].BaseLPH = float.Parse(S_BaseData[14]);
-        CharacterData[slotIndex].BaseMPH = float.Parse(S_BaseData[15]);
+        CharacterData[slotIndex].souls = int.Parse(S_BaseData[i++]);
+
+        CharacterData[slotIndex].StatPoints = int.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].SkillPoints = int.Parse(S_BaseData[i++]);
+
+        CharacterData[slotIndex].BaseHealth = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseMana = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseAD = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseMD = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseAttkSpd = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseMoveSpd = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseDefense = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseCritChance = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseCritDmgBounus = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseLPH = float.Parse(S_BaseData[i++]);
+        CharacterData[slotIndex].BaseMPH = float.Parse(S_BaseData[i++]);
+    }
+
+    private static void ReadSkillTreelvls(int SlotIndex, string SkillTreelvlsData) {
+        string[] S_SkillTreelvlsData = Regex.Split(SkillTreelvlsData, DataSeperator);
+        CharacterData[SlotIndex].SkillTreelvls = new int[SkillTreeSize];
+        for (int s = 0; s < SkillTreeSize; s++) {
+            CharacterData[SlotIndex].SkillTreelvls[s] = int.Parse(S_SkillTreelvlsData[s]);
+        }
+    }
+
+    private static void ReadActiveSkills(int SlotIndex, string ActiveSkillsData) {
+        string[] S_ActiveSkillsData = Regex.Split(ActiveSkillsData, DataSeperator);
+        CharacterData[SlotIndex].ActiveSlotData = new SkillData[ActiveSkillSlots];
+        for(int s = 0; s < ActiveSkillSlots; s++) {
+            if (S_ActiveSkillsData[s] == "null")
+                CharacterData[SlotIndex].ActiveSlotData[s] = null;
+            else {
+                SkillData SD = ScriptableObject.CreateInstance<SkillData>();
+                SD.Name = S_ActiveSkillsData[s];
+                CharacterData[SlotIndex].ActiveSlotData[s] = SD;
+            }
+        }
     }
 
     private static void ReadEquipments(int slotIndex, string EquipData) {
@@ -207,7 +284,7 @@ public static class DataManager{
 
     static private void ReadInventory(int SlotIndex, string InventoryData) {
         string[] S_EquipData = Regex.Split(InventoryData, EquipmentSeperator);
-        CharacterData[SlotIndex].Inventory = new Equipment[40];
+        CharacterData[SlotIndex].Inventory = new Equipment[InventoryCapacity];
         for(int i =0;i< CharacterData[SlotIndex].Inventory.Length; i++) {
             CharacterData[SlotIndex].Inventory[i] = ReadOnePieceOfEquip(S_EquipData[i]);
         }
@@ -216,31 +293,31 @@ public static class DataManager{
     private static Equipment ReadOnePieceOfEquip(string PieceEquipData) {
         if (PieceEquipData == "null")
             return null;
-        //Equipment E = ScriptableObject.CreateInstance<Equipment>();
-        Equipment E = new Equipment();
+        Equipment E = ScriptableObject.CreateInstance<Equipment>();
         string[] S_PieceEquipData = Regex.Split(PieceEquipData, DataSeperator);
-        E.Rarity = int.Parse(S_PieceEquipData[0]);
-        E.Name = S_PieceEquipData[1];
-        E.Class = S_PieceEquipData[2];
-        E.Type = S_PieceEquipData[3];
-        E.LvlReq = int.Parse(S_PieceEquipData[4]);
+        int i = 0;
+        E.Rarity = int.Parse(S_PieceEquipData[i++]);
+        E.Name = S_PieceEquipData[i++];
+        E.Class = S_PieceEquipData[i++];
+        E.Type = S_PieceEquipData[i++];
+        E.LvlReq = int.Parse(S_PieceEquipData[i++]);
 
-        E.AddHealth = float.Parse(S_PieceEquipData[5]);
-        E.AddMana = float.Parse(S_PieceEquipData[6]);
-        E.AddAD = float.Parse(S_PieceEquipData[7]);
-        E.AddMD = float.Parse(S_PieceEquipData[8]);
-        E.AddAttkSpd = float.Parse(S_PieceEquipData[9]);
-        E.AddMoveSpd = float.Parse(S_PieceEquipData[10]);
-        E.AddDefense = float.Parse(S_PieceEquipData[11]);
+        E.AddHealth = float.Parse(S_PieceEquipData[i++]);
+        E.AddMana = float.Parse(S_PieceEquipData[i++]);
+        E.AddAD = float.Parse(S_PieceEquipData[i++]);
+        E.AddMD = float.Parse(S_PieceEquipData[i++]);
+        E.AddAttkSpd = float.Parse(S_PieceEquipData[i++]);
+        E.AddMoveSpd = float.Parse(S_PieceEquipData[i++]);
+        E.AddDefense = float.Parse(S_PieceEquipData[i++]);
 
-        E.AddCritChance = float.Parse(S_PieceEquipData[12]);
-        E.AddCritDmgBounus = float.Parse(S_PieceEquipData[13]);
+        E.AddCritChance = float.Parse(S_PieceEquipData[i++]);
+        E.AddCritDmgBounus = float.Parse(S_PieceEquipData[i++]);
 
-        E.AddLPH = float.Parse(S_PieceEquipData[14]);
-        E.AddMPH = float.Parse(S_PieceEquipData[15]);
+        E.AddLPH = float.Parse(S_PieceEquipData[i++]);
+        E.AddMPH = float.Parse(S_PieceEquipData[i++]);
 
-        E.Reroll = int.Parse(S_PieceEquipData[16]);
-        E.Reforged = int.Parse(S_PieceEquipData[17]);
+        E.Reroll = int.Parse(S_PieceEquipData[i++]);
+        E.Reforged = int.Parse(S_PieceEquipData[i++]);
         //Debug.Log(E.Name);
         return E;
     }
@@ -250,27 +327,53 @@ public static class DataManager{
         StreamWriter SaveStream = new StreamWriter(FilePath);
         for (int slotIndex = 0; slotIndex < NumOfSlot; slotIndex++) {
             SaveStream.Write(
-                //Base Stats
-                slotIndex + DataSeperator +
-                "null" + DataSeperator +
-                "null" + DataSeperator +
-                CharacterData[slotIndex].lvl + DataSeperator +
-                CharacterData[slotIndex].paragon_lvl + DataSeperator +
+            //Base Stats
+            slotIndex + DataSeperator +
+            "null" + DataSeperator +
+            "null" + DataSeperator +
+            CharacterData[slotIndex].lvl + DataSeperator +
+            CharacterData[slotIndex].paragon_lvl + DataSeperator +
+            CharacterData[slotIndex].exp + DataSeperator +
 
-                CharacterData[slotIndex].BaseHealth + DataSeperator +
-                CharacterData[slotIndex].BaseMana + DataSeperator +
-                CharacterData[slotIndex].BaseAD + DataSeperator +
-                CharacterData[slotIndex].BaseMD + DataSeperator +
-                CharacterData[slotIndex].BaseAttkSpd + DataSeperator +
-                CharacterData[slotIndex].BaseMoveSpd + DataSeperator +
-                CharacterData[slotIndex].BaseDefense + DataSeperator +
-                CharacterData[slotIndex].BaseCritChance + DataSeperator +
-                CharacterData[slotIndex].BaseCritDmgBounus + DataSeperator +
-                CharacterData[slotIndex].BaseLPH + DataSeperator +
-                CharacterData[slotIndex].BaseMPH +
+            CharacterData[slotIndex].souls + DataSeperator +
 
-                Environment.NewLine + CategorySeperator + Environment.NewLine +
-                //Equiped Items
+            CharacterData[slotIndex].StatPoints + DataSeperator +
+            CharacterData[slotIndex].SkillPoints + DataSeperator +
+
+            CharacterData[slotIndex].BaseHealth + DataSeperator +
+            CharacterData[slotIndex].BaseMana + DataSeperator +
+            CharacterData[slotIndex].BaseAD + DataSeperator +
+            CharacterData[slotIndex].BaseMD + DataSeperator +
+            CharacterData[slotIndex].BaseAttkSpd + DataSeperator +
+            CharacterData[slotIndex].BaseMoveSpd + DataSeperator +
+            CharacterData[slotIndex].BaseDefense + DataSeperator +
+            CharacterData[slotIndex].BaseCritChance + DataSeperator +
+            CharacterData[slotIndex].BaseCritDmgBounus + DataSeperator +
+            CharacterData[slotIndex].BaseLPH + DataSeperator +
+            CharacterData[slotIndex].BaseMPH);
+
+            SaveStream.Write(Environment.NewLine + CategorySeperator + Environment.NewLine);
+
+            //Skill Tree
+            for (int s = 0; s < SkillTreeSize; s++) {
+                if (s == SkillTreeSize - 1)
+                    SaveStream.Write(0);
+                else
+                    SaveStream.Write(0 + DataSeperator);
+            }
+            SaveStream.Write(Environment.NewLine + CategorySeperator + Environment.NewLine);
+
+            //Active Skills
+            for(int s = 0; s < ActiveSkillSlots; s++) {
+                if (s == ActiveSkillSlots - 1)
+                    SaveStream.Write("null");
+                else
+                    SaveStream.Write("null" + DataSeperator);
+            }
+            SaveStream.Write(Environment.NewLine + CategorySeperator + Environment.NewLine);
+
+            //Equiped Items
+            SaveStream.Write(
                 "null" +
                 Environment.NewLine + EquipmentSeperator + Environment.NewLine +
                 "null" +
@@ -282,12 +385,12 @@ public static class DataManager{
                 "null" +
 
                 Environment.NewLine + CategorySeperator + Environment.NewLine
-                );
+            );
 
             //Inventory
-            for(int i = 0; i < 40; i++) {
+            for(int i = 0; i < InventoryCapacity; i++) {
                 SaveStream.Write("null");
-                if (i < 39)
+                if (i < InventoryCapacity-1)
                     SaveStream.Write(Environment.NewLine+EquipmentSeperator + Environment.NewLine);
             }
 

@@ -8,7 +8,6 @@ public class EquippedButtonController : MonoBehaviour {
     private string Slot;
 
     GameObject ES;
-    GameObject InventoryButtons;
 
     public GameObject Stats;
 
@@ -19,7 +18,6 @@ public class EquippedButtonController : MonoBehaviour {
         Slot = gameObject.name;
         PC = GameObject.Find("MainPlayer/PlayerController").transform.GetComponent<PlayerController>();
         ES = GameObject.Find("EventSystem");
-        InventoryButtons = GameObject.Find("MainPlayer/PlayerUI/CharacterSheet/InventoryButtons").gameObject;
         Stats = Instantiate(Stats, transform) as GameObject;
         Stats.transform.localPosition = new Vector3(0, 0, 0);
         Stats.transform.localScale = new Vector3(1.2f, 1.2f, 0);

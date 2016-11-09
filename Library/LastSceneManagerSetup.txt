@@ -1,4 +1,4 @@
 sceneSetups:
-- path: Assets/Scene/small_town.unity
+- path: Assets/Scene/cave1.unity
   isLoaded: 1
   isActive: 1

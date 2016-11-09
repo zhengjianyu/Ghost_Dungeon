@@ -39,7 +39,18 @@ public class EquipmentController : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
+        IgnoreCollisionUpdate();
+    }
 
+    void IgnoreCollisionUpdate() {
+        List<GameObject> IgnoreList = new List<GameObject>(GameObject.FindGameObjectsWithTag("Player"));
+        IgnoreList.AddRange(GameObject.FindGameObjectsWithTag("Enemy"));
+        foreach (var so in GameObject.FindGameObjectsWithTag("Skill")) {
+            if (so.GetComponent<Collider2D>() != null)
+                IgnoreList.Add(so);
+        }
+        foreach (var o in IgnoreList)
+            Physics2D.IgnoreCollision(o.GetComponent<Collider2D>(), GetComponent<Collider2D>());
     }
 
     public void EquipUpdate(int Direction, Vector2 AttackVector) {
@@ -66,12 +77,6 @@ public class EquipmentController : MonoBehaviour {
                 GetComponent<SpriteRenderer>().sortingOrder = 2;
         } else {//Helmet,Chest,Shackle
             Anim.speed = PC.GetMovementAnimSpeed();
-        }
-    }
-
-    void OnCollisionEnter2D(Collision2D collider) {
-        if (collider.transform.tag == "Player" || collider.transform.tag == "Enemy") {
-            Physics2D.IgnoreCollision(collider.transform.GetComponent<Collider2D>(), GetComponent<Collider2D>());
         }
     }
 
@@ -146,8 +151,8 @@ public class EquipmentController : MonoBehaviour {
         return equipIcon;
     }
 
-    private void InstantiateEquipmentData() {//These 3 field are must have
-        E = new Equipment();
+    private void InstantiateEquipmentData() {//These 4 field are must have
+        E = ScriptableObject.CreateInstance<Equipment>();
         E.Rarity = Rarity;
         E.Name = Name;
         E.Class = Class;

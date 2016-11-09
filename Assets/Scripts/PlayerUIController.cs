@@ -9,6 +9,7 @@ public class PlayerUIController : MonoBehaviour {
     PlayerController PC;
     Transform HealthMask;
     Transform ManaMask;
+    Transform ExpMask;
 
     MenuController MC;
     CharacterSheetController CSC;
@@ -22,21 +23,21 @@ public class PlayerUIController : MonoBehaviour {
             CM = FindObjectOfType<ControllerManager>();
 
         PC = transform.parent.Find("PlayerController").GetComponent<PlayerController>();
-        HealthMask = transform.Find("Health Bar/Mask");
-        ManaMask = transform.Find("Mana Bar/Mask");
+        HealthMask = transform.Find("Action Bar/Health Orb");
+        ManaMask = transform.Find("Action Bar/Mana Orb");
+        ExpMask = transform.Find("Action Bar/XP mask");
 
         MC = transform.Find("Menu").GetComponent<MenuController>();
         CSC = transform.Find("CharacterSheet").GetComponent<CharacterSheetController>();
     }
 
     void Start() {
-
     }
 	
 	// Update is called once per frame
 	void Update () {
         PopUpUIUpdate();
-        UpdateHealthManaBar();
+        UpdateExpBar();
     }
 
     private void PopUpUIUpdate() {
@@ -66,15 +67,19 @@ public class PlayerUIController : MonoBehaviour {
             CM.AllowControlUpdate = true;
     }
 
-    void UpdateHealthManaBar() {
+    public void UpdateHealthManaBar() {
         if(PC.CurrHealth/PC.MaxHealth>=0)
-            HealthMask.transform.localScale = new Vector2(PC.CurrHealth / PC.MaxHealth, 1);
+            HealthMask.transform.localScale = new Vector2(1, PC.CurrHealth / PC.MaxHealth);
         else
-            HealthMask.transform.localScale = new Vector2(0, 1);
+            HealthMask.transform.localScale = new Vector2(1, 0);
         if (PC.CurrMana / PC.MaxMana >= 0)
-            ManaMask.transform.localScale = new Vector2(PC.CurrMana / PC.MaxMana, 1);
+            ManaMask.transform.localScale = new Vector2( 1, PC.CurrMana / PC.MaxMana);
         else
-            ManaMask.transform.localScale = new Vector2(0, 1);
+            ManaMask.transform.localScale = new Vector2(1,0);
+    }
+
+    public void UpdateExpBar() {
+        ExpMask.GetComponent<Image>().fillAmount = ((float)PC.PlayerData.exp / (float)PC.GetNextLvlExp());
     }
 
 }

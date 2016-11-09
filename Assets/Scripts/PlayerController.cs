@@ -2,12 +2,13 @@
 using System.Collections;
 using System.Collections.Generic;
 
-public class PlayerController : MonoBehaviour {
+public class PlayerController : ObjectController {
+    private int NextLevelExp = -999;
+
     public AudioClip hit;
-    public AudioClip crit_hit;
+    public AudioClip default_crit_hit;
     public AudioClip die;
-    public float movement_animation_interval = 1f;
-    public float attack_animation_interval = 1f;
+    public AudioClip lvlup;
 
     [HideInInspector]
     public CharacterDataStruct PlayerData;
@@ -54,9 +55,10 @@ public class PlayerController : MonoBehaviour {
 
     Dictionary<string, GameObject> EquipPrefabs;
 
-    Rigidbody2D rb;
-    private ControllerManager CM;
+    public ControllerManager CM;
     private SaveLoadManager SLM;
+    private IndicationController IC;
+    private PlayerUIController PUIC;
 
     private GameObject BaseModel;
 
@@ -65,17 +67,23 @@ public class PlayerController : MonoBehaviour {
     public GameObject FirstWeapon;
 
     [HideInInspector]
-    public bool Attacking = false;
+    public GameObject SkillTree;
+    [HideInInspector]
+    public Transform Actives;
+    [HideInInspector]
+    public Transform Passives;
 
-    //[HideInInspector]
-    //public bool Alive = false;
+    protected override void Awake() {
+        base.Awake();
 
-    void Awake() {
-        if(FirstWeapon!=null)
+        //QualitySettings.vSyncCount = 0;
+        //Application.targetFrameRate = 30;
+
+        if (FirstWeapon!=null)
             FirstWeapon.GetComponent<EquipmentController>().InstantiateLoot(transform);
         EquipPrefabs = new Dictionary<string, GameObject>();
-        rb = transform.parent.GetComponent<Rigidbody2D>();
-        if (transform.parent.tag == "MainPlayer") {
+        
+        if (transform.parent.name == "MainPlayer") {
             if (ControllerManager.Instance) {
                 CM = ControllerManager.Instance;
             } else
@@ -84,12 +92,46 @@ public class PlayerController : MonoBehaviour {
                 SLM = SaveLoadManager.Instance;
             else
                 SLM = FindObjectOfType<SaveLoadManager>();
+            PUIC = transform.parent.Find("PlayerUI").GetComponent<PlayerUIController>();
             PlayerData = SLM.LoadPlayerInfo(SLM.SlotIndexToLoad);
         }
+        IC = transform.Find("Indication Board").GetComponent<IndicationController>();
+        Actives = transform.Find("Actives");
+        Passives = transform.Find("Passives");
+        InitPlayer();
     }
 
     void Start() {
-        InitPlayer();
+        //InitPlayer();
+    }
+
+    // Update is called once per frame
+    void Update() {
+        ControlUpdate();
+        PickUpInUpdate();
+        EquiPrefabsUpdate();
+        BaseModelUpdate();
+    }
+
+    void FixedUpdate() {
+        MoveUpdate();
+    }
+
+    void ControlUpdate() {
+        if (Stunned)
+            return;
+        if (CM != null) {
+            AttackVector = CM.AttackVector;
+            MoveVector = CM.MoveVector;
+            Direction = CM.Direction;
+        }
+    }
+
+    void MoveUpdate() {
+        if (MoveVector != Vector2.zero) {
+            //rb.MovePosition(rb.position + MoveVector * (CurrMoveSpd / 100) * Time.deltaTime);
+            rb.AddForce(MoveVector * (CurrMoveSpd / 100) * rb.drag);
+        }
     }
 
     void OnTriggerStay2D(Collider2D collider) {
@@ -101,27 +143,39 @@ public class PlayerController : MonoBehaviour {
 
     void OnTriggerExit2D(Collider2D collider) {
         if (collider.tag == "Lootable" && PickedTarget!=null) {
-            //transform.Find("Indication Board/PickUpNotify").gameObject.SetActive(false);
             PickedTarget = null;
         }
     }
 
-    // Update is called once per frame
-    void Update() {
-        PickUpInUpdate();
-        EquiPrefabsUpdate();
-        BaseModelUpdate();
-    }
-
-    void FixedUpdate() {
-         MoveUpdate();
-    }
-
     //----------public
-    
+    //Skills Handling
+    public ActiveSkill GetActiveSlotSkillTransform(int Slot) {
+        if (PlayerData.ActiveSlotData[Slot] == null ||Actives.childCount == 0)
+            return null;
+        for (int i = 0; i < Actives.childCount; i++) {
+            if (Actives.GetChild(i).GetComponent<ActiveSkill>().SkillData.Name == PlayerData.ActiveSlotData[Slot].Name)
+                return Actives.GetChild(i).GetComponent<ActiveSkill>();
+        }
+        return null;
+    }
+
+    //EXP handling
+    public void AddEXP(int exp) {
+        if (PlayerData.lvl < LvlExpModule.LvlCap) {
+            PlayerData.exp += exp;
+            CheckLevelUp();
+            //if(PUIC)
+            //    PUIC.UpdateExpBar();
+        }
+        SLM.SaveCurrentPlayerInfo();
+    }
+
+    public int GetNextLvlExp() {
+        return NextLevelExp;
+    }
 
     //Combat Methods
-    public DMG AutoAttackDamageDeal(float TargetDefense) {
+    override public DMG AutoAttackDamageDeal(float TargetDefense) {
         DMG dmg = new DMG();
         if (Random.value < (CurrCritChance / 100)) {
             dmg.Damage += CurrAD * (CurrCritDmgBounus / 100);
@@ -148,8 +202,14 @@ public class PlayerController : MonoBehaviour {
             CurrMana = MaxMana;
     }
 
-    public void DeductHealth(DMG dmg) {
-        IndicationController IC = transform.Find("Indication Board").GetComponent<IndicationController>();
+    public override void DeductMana(float ManaCost) {
+        CurrMana -= ManaCost;
+        if (transform.parent.tag == "MainPlayer") {
+            PUIC.UpdateHealthManaBar();
+        }
+    }
+
+    override public void DeductHealth(DMG dmg, AudioClip crit_sfx = null) {
         if (CurrHealth - dmg.Damage <= 0) {
             CurrHealth -= dmg.Damage;
             IC.UpdateHealthBar();
@@ -161,20 +221,20 @@ public class PlayerController : MonoBehaviour {
             Animator Anim = GetComponent<Animator>();
             Anim.SetFloat("PhysicsSpeedFactor", GetPhysicsSpeedFactor());
             Anim.Play("crit");
-            AudioSource.PlayClipAtPoint(crit_hit, transform.position, GameManager.SFX_Volume);
+            if(crit_sfx==null)
+                AudioSource.PlayClipAtPoint(default_crit_hit, transform.position, GameManager.SFX_Volume);
+            else
+                AudioSource.PlayClipAtPoint(crit_sfx, transform.position, GameManager.SFX_Volume);
         } else {
             AudioSource.PlayClipAtPoint(hit, transform.position, GameManager.SFX_Volume);
         }
         CurrHealth -= dmg.Damage;
-        IC.UpdateHealthBar();
-        IC.PopUpDmg(dmg);
-    }
-
-    void DieUpdate() {
-        if (CurrHealth <= 0) {//Insert dead animation here
-            //GetComponent<DropList>().SpawnLoots(); //Added for PVP later
-            Destroy(gameObject);
+        if (transform.parent.tag == "MainPlayer") {
+            PUIC.UpdateHealthManaBar();
+        } else {
+            IC.UpdateHealthBar();
         }
+        IC.PopUpDmg(dmg);
     }
 
     //Animation Handling
@@ -258,8 +318,28 @@ public class PlayerController : MonoBehaviour {
 
     //-------private
     void InitPlayer() {
-        InstaniateEquipment();
+        if(PlayerData.lvl<LvlExpModule.LvlCap)
+            NextLevelExp = LvlExpModule.GetRequiredExp(PlayerData.lvl + 1);
+        InitSkills();
         InitStats();
+        InstaniateEquipment();
+        //PUIC.UpdateExpBar();
+    }
+
+    void InitSkills() {
+        if (PlayerData.Class == "Warrior") {
+            SkillTree = Instantiate(Resources.Load("SkillPrefabs/WarriorSkillTree"), transform) as GameObject;
+            SkillTree.name = "SkillTree";
+        }
+        else if(PlayerData.Class == "Mage") {
+
+        }else if(PlayerData.Class == "Rogue") {
+
+        }
+        SkillTree.GetComponent<SkillTreeController>().InstantiateSkills();
+        if (PUIC) {//MainPlayer UI
+
+        }
     }
 
     void InitStats() {
@@ -307,7 +387,7 @@ public class PlayerController : MonoBehaviour {
     void BaseModelUpdate() {
         Animator BaseModelAnim = BaseModel.GetComponent<Animator>();
         if (CM != null) {
-            BaseModelAnim.SetInteger("Direction", CM.Direction);
+            BaseModelAnim.SetInteger("Direction", Direction);
             BaseModelAnim.speed = GetMovementAnimSpeed();
         }
     }
@@ -316,17 +396,9 @@ public class PlayerController : MonoBehaviour {
         if (CM != null) {
             foreach(var e_prefab in EquipPrefabs.Values) {
                 if(e_prefab!=null)
-                    e_prefab.GetComponent<EquipmentController>().EquipUpdate(CM.Direction, CM.AttackVector);
+                    e_prefab.GetComponent<EquipmentController>().EquipUpdate(Direction, AttackVector);
             }
         }      
-    }
-
-    void MoveUpdate() {
-        if (CM != null) {
-            if (CM.MoveVector != Vector2.zero) {
-                rb.MovePosition(rb.position + CM.MoveVector * (CurrMoveSpd/100) * Time.deltaTime);
-            }
-        }
     }
 
     //-------helper
@@ -406,5 +478,26 @@ public class PlayerController : MonoBehaviour {
             }
         } else
             transform.Find("Indication Board/PickUpNotify").gameObject.SetActive(false);
+    }
+
+    void CheckLevelUp() {
+        if (PlayerData.lvl >= LvlExpModule.LvlCap)
+            return;
+        if(PlayerData.exp >= NextLevelExp) {
+            PlayerData.lvl++;
+            PlayerData.exp = 0;
+            NextLevelExp = LvlExpModule.GetRequiredExp(PlayerData.lvl + 1);
+            AudioSource.PlayClipAtPoint(lvlup, transform.position, GameManager.SFX_Volume);
+            PlayerData.StatPoints++;
+            PlayerData.SkillPoints++;            
+        }     
+    }
+
+    void DieUpdate() {
+        if (CurrHealth <= 0) {//Insert dead animation here
+            //GetComponent<DropList>().SpawnLoots(); //Added for PVP later
+            Alive = false;
+            Destroy(gameObject);
+        }
     }
 }

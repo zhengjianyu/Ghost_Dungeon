@@ -9,6 +9,12 @@ public struct CharacterDataStruct{
     public string Class;
     public int lvl;
     public int paragon_lvl;
+    public int exp;
+
+    public int souls;
+
+    public int StatPoints;
+    public int SkillPoints;
 
     public float BaseHealth;
     public float BaseMana;
@@ -22,6 +28,11 @@ public struct CharacterDataStruct{
     public float BaseLPH;
     public float BaseMPH;
 
+    public int[] SkillTreelvls;
+
+    public SkillData[] ActiveSlotData;
+
     public Dictionary<string, Equipment> Equipments;
+
     public Equipment[] Inventory;
 }

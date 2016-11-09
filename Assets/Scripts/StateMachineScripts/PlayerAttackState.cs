@@ -15,7 +15,7 @@ public class PlayerAttackState : StateMachineBehaviour {
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
     override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex) {
         WeaponController WC = animator.transform.GetComponent<WeaponController>();
-        if((WC.Type == 0 || WC.Type == 1) && stateInfo.normalizedTime >= 0.5) {
+        if ((WC.Type == 0 || WC.Type == 1) && stateInfo.normalizedTime >= 0.5) {
             MeleeAttacExit(animator, stateInfo, WC);
         }
     }
